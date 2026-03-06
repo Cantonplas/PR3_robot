@@ -33,7 +33,7 @@ namespace Pinout
   static constexpr uint8_t MOTOR2B =7;
 
   static constexpr uint8_t PIN_LED = 48; //No va
-  static constexpr uint8_t PIN_LED2 = 11;
+  static constexpr uint8_t PIN_LED2 = 8;
 
 };
 

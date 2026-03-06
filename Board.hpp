@@ -8,6 +8,9 @@
 
 class Board
 {
+
+  static inline uint32_t junction_time_ms{0};
+  static inline bool timeout_ultrasonidos{false};
   /*State Machine declaration*/
   static inline constexpr auto connecting_state = make_state(General_states::Connecting,
         Transition<General_states>{General_states::Operational, []() { return Comms::is_connected(); }}
@@ -27,13 +30,20 @@ class Board
         Transition<Operational_states>{Operational_states::Junction_forward, []() { return Comms::get_auth_flag(); }}
     );
 
-  // static inline constexpr auto junction_stop_state = make_state(Operational_states::Junction_stop,
-  //       Transition<Operational_states>{Operational_states::Junction_forward, []() { return Sensors::distancia_ultra > 6.0; }}
-  //   );
-
   static inline constexpr auto junction_forward_state = make_state(Operational_states::Junction_forward,
-      Transition<Operational_states>{Operational_states::Forward, []() { return Comms::get_end_flag(); }}
-  );
+        Transition<Operational_states>{Operational_states::Forward, []() { 
+          if(timeout_ultrasonidos){
+            return Sensors::distancia_ultra < 3.0; 
+          }else
+          {
+            false;
+          }
+        }}
+    );
+
+  // static inline constexpr auto junction_forward_state = make_state(Operational_states::Junction_forward,
+  //     Transition<Operational_states>{Operational_states::Forward, []() { return Comms::get_end_flag(); }}
+  // );
 
   static inline constinit auto Nested_state_machine = [forward_state,junction_stop_state,junction_forward_state]()consteval{
     auto sm = make_state_machine(Operational_states::Forward, forward_state,junction_stop_state,junction_forward_state);
@@ -45,7 +55,12 @@ class Board
       Actuators::set_led_green(true);
       Actuators::blink_led_no_color(true);
       Comms::set_end_flag(false);
+      Serial.println("forward");
     },forward_state);
+
+    sm.add_cyclic_action([](){
+      Sensors::read_ultrasonido();
+    },50ms,forward_state);
 
     sm.add_cyclic_action([](){
         Actuators::control_loop();
@@ -56,6 +71,7 @@ class Board
     sm.add_enter_action([](){
       Actuators::stop();
       Comms::send_auth_request();
+      Serial.println("Stop");
     },junction_stop_state);
 
     sm.add_cyclic_action([](){
@@ -69,15 +85,17 @@ class Board
       Comms::send_auth_request();
     },250ms,junction_stop_state);
     
-    sm.add_exit_action([](){
-      Actuators::move(Actuators::Direction::Forward,Actuator_data::MAX_SPEED,Actuator_data::MAX_SPEED);
-    },junction_stop_state);
-
     /*--------Junction forward----------*/
 
     sm.add_enter_action([](){
       Actuators::set_led_blue(true);
       Comms::set_auth_flag(false);
+      timeout_ultrasonidos = false;
+      Serial.println("forward");
+      junction_time_ms= Scheduler::get_global_time();
+      Scheduler::set_timeout(300,[](){
+        timeout_ultrasonidos = true;
+      });
     },junction_forward_state);
 
     sm.add_cyclic_action([](){
@@ -89,6 +107,13 @@ class Board
       Actuators::blink_led_no_color(toggle);
       toggle =!toggle;
     }, 200ms, junction_forward_state);
+
+    sm.add_exit_action([](){
+      uint32_t aux_time = Scheduler::get_global_time() - junction_time_ms;
+      Comms::send_time(aux_time);
+      timeout_ultrasonidos = false;
+    },junction_forward_state);
+
 
     return sm;
   }();
@@ -119,6 +144,7 @@ class Board
     return sm;
   }();
 
+
   public: 
   static void start()
   {
@@ -126,9 +152,6 @@ class Board
     Actuators::init();
     Scheduler::register_task(1,[](){
       Sensors::read_infrarojo();
-    });
-    Scheduler::register_task(50,[](){
-      Sensors::read_ultrasonido();
     });
 
     State_machine.start();
