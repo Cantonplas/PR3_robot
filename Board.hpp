@@ -23,7 +23,13 @@ class Board
   static inline constexpr auto fault_state = make_state(General_states::Fault);
 
   static inline constexpr auto forward_state = make_state(Operational_states::Forward,
-        Transition<Operational_states>{Operational_states::Junction_stop, []() { return Sensors::distancia_ultra < 7.0; }}
+        Transition<Operational_states>{Operational_states::Junction_stop, []() { 
+          if(timeout_ultrasonidos){
+            return Sensors::distancia_ultra < 5.0; 
+          }else
+          {
+            false;
+          } }}
     );
 
   static inline constexpr auto junction_stop_state = make_state(Operational_states::Junction_stop,
@@ -56,6 +62,14 @@ class Board
       Actuators::blink_led_no_color(true);
       Comms::set_end_flag(false);
       Serial.println("forward");
+    },forward_state);
+
+    sm.add_enter_action([](){
+      timeout_ultrasonidos = false;
+      junction_time_ms= Scheduler::get_global_time();
+      Scheduler::set_timeout(300,[](){
+        timeout_ultrasonidos = true;
+      });
     },forward_state);
 
     sm.add_cyclic_action([](){
