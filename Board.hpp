@@ -42,7 +42,7 @@ class Board
             return Sensors::distancia_ultra < 6.0; 
           }else
           {
-            false;
+            return false;
           }
         }}
     );
@@ -105,9 +105,10 @@ class Board
       Actuators::set_led_blue(true);
       Comms::set_auth_flag(false);
       timeout_ultrasonidos = false;
-      Serial.println("forward");
-      junction_time_ms= Scheduler::get_global_time();
-      Scheduler::set_timeout(900,[](){
+      Serial.println("Junction forward");
+      junction_time_ms= millis();
+      Serial.println(junction_time_ms);
+      Scheduler::set_timeout(1000,[](){
         timeout_ultrasonidos = true;
       });
     },junction_forward_state);
@@ -127,7 +128,8 @@ class Board
     }, 200ms, junction_forward_state);
 
     sm.add_exit_action([](){
-      uint32_t aux_time = Scheduler::get_global_time() - junction_time_ms;
+      uint32_t aux_time = millis() - junction_time_ms;
+      Serial.println(aux_time);
       Comms::send_time(aux_time);
       timeout_ultrasonidos = false;
     },junction_forward_state);
