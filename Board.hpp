@@ -25,7 +25,7 @@ class Board
   static inline constexpr auto forward_state = make_state(Operational_states::Forward,
         Transition<Operational_states>{Operational_states::Junction_stop, []() { 
           if(timeout_ultrasonidos){
-            return Sensors::distancia_ultra < 6.0; 
+            return Sensors::distancia_ultra < 9.0; 
           }else
           {
             return false;
@@ -39,7 +39,7 @@ class Board
   static inline constexpr auto junction_forward_state = make_state(Operational_states::Junction_forward,
         Transition<Operational_states>{Operational_states::Forward, []() { 
           if(timeout_ultrasonidos){
-            return Sensors::distancia_ultra < 6.0; 
+            return Sensors::distancia_ultra < 9.0; 
           }else
           {
             return false;

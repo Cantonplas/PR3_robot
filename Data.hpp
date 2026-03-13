@@ -1,6 +1,6 @@
 #pragma once
 
-#define ID_COCHE 1
+#define ID_COCHE 0
 
 enum class General_states: uint8_t
 {
@@ -47,7 +47,7 @@ namespace Actuator_data
   static constexpr uint8_t MAX_SPEED = 255; // (≈70 % de potencia)
   static constexpr uint8_t MINIMUM_SPEED = 20;
   #else
-  static constexpr uint8_t NORMAL_SPEED = 200; // (≈70 % de potencia)
+  static constexpr uint8_t NORMAL_SPEED = 215; // (≈70 % de potencia)
   static constexpr uint8_t MAX_SPEED = 255; // (≈70 % de potencia)
   static constexpr uint8_t MINIMUM_SPEED = 20;
   #endif
